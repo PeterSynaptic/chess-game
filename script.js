@@ -330,9 +330,19 @@ class ChessGame {
     }
 
     makeAIMove() {
-        console.log('AI thinking...');
+        if (!this.isAIEnabled || this.currentPlayer !== this.aiColor) {
+            console.log('AI move skipped - not AI turn or AI disabled');
+            return;
+        }
+
+        console.log('AI thinking...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
         const moves = this.getAllPossibleMoves(this.aiColor);
         console.log('Available moves:', moves.length);
+
+        if (moves.length === 0) {
+            console.log('No moves available for AI');
+            return;
+        }
 
         let bestMove = null;
         let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
@@ -362,6 +372,7 @@ class ChessGame {
         }
 
         if (bestMove) {
+            console.log('AI executing move:', bestMove);
             const piece = this.boardState[bestMove.fromRow][bestMove.fromCol];
             this.boardState[bestMove.toRow][bestMove.toCol] = piece;
             this.boardState[bestMove.fromRow][bestMove.fromCol] = null;
@@ -374,6 +385,8 @@ class ChessGame {
             // Update game state
             this.currentPlayer = 'white';
             this.turnDisplay.textContent = "White's Turn";
+        } else {
+            console.log('AI could not find a valid move');
         }
     }
 
@@ -389,11 +402,11 @@ class ChessGame {
 
         // If it's AI's turn after this move, trigger AI move
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
-            console.log('Triggering AI move...');
+            console.log('Triggering AI move...', 'Current player:', this.currentPlayer);
+            // Reduced delay to make AI more responsive
             setTimeout(() => {
-                console.log('Making AI move...');
                 this.makeAIMove();
-            }, 500);
+            }, 100);
         }
     }
 
