@@ -115,11 +115,6 @@ class ChessGame {
                 this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
                 this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
                     this.currentPlayer.slice(1)}'s Turn`;
-                    
-                // If it's AI's turn after the move, trigger AI move
-                if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
-                    setTimeout(() => this.makeAIMove(), 500);
-                }
             }
             this.selectedPiece = null;
         }
@@ -335,7 +330,10 @@ class ChessGame {
     }
 
     makeAIMove() {
+        console.log('AI thinking...');
         const moves = this.getAllPossibleMoves(this.aiColor);
+        console.log('Available moves:', moves.length);
+
         let bestMove = null;
         let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
 
@@ -364,8 +362,18 @@ class ChessGame {
         }
 
         if (bestMove) {
-            this.handleSquareClick(bestMove.fromRow, bestMove.fromCol);
-            this.handleSquareClick(bestMove.toRow, bestMove.toCol);
+            const piece = this.boardState[bestMove.fromRow][bestMove.fromCol];
+            this.boardState[bestMove.toRow][bestMove.toCol] = piece;
+            this.boardState[bestMove.fromRow][bestMove.fromCol] = null;
+
+            // Update UI
+            const squares = document.querySelectorAll('.square');
+            squares[bestMove.fromRow * 8 + bestMove.fromCol].textContent = '';
+            squares[bestMove.toRow * 8 + bestMove.toCol].textContent = this.pieces[this.aiColor][bestMove.piece];
+
+            // Update game state
+            this.currentPlayer = 'white';
+            this.turnDisplay.textContent = "White's Turn";
         }
     }
 
@@ -379,9 +387,13 @@ class ChessGame {
         squares[fromRow * 8 + fromCol].textContent = '';
         squares[toRow * 8 + toCol].textContent = this.pieces[piece.color][piece.piece];
 
-        // If it's AI's turn after the move, make AI move
+        // If it's AI's turn after this move, trigger AI move
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
-            setTimeout(() => this.makeAIMove(), 500); // Add delay for better UX
+            console.log('Triggering AI move...');
+            setTimeout(() => {
+                console.log('Making AI move...');
+                this.makeAIMove();
+            }, 500);
         }
     }
 
