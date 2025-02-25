@@ -7,6 +7,7 @@ class ChessGame {
         this.currentPlayer = 'white';
         this.isAIEnabled = true;  // Enable AI by default
         this.aiColor = 'black';   // AI plays as black
+        this.debugMode = true; // Enable debug logging
         this.pieces = {
             white: {
                 king: '♔',
@@ -112,6 +113,7 @@ class ChessGame {
             const validMove = this.isValidMove(this.selectedPiece.row, this.selectedPiece.col, row, col);
             
             if (validMove) {
+                console.log('Making move from', this.selectedPiece.row, this.selectedPiece.col, 'to', row, col);
                 this.movePiece(this.selectedPiece.row, this.selectedPiece.col, row, col);
             }
             this.selectedPiece = null;
@@ -329,55 +331,34 @@ class ChessGame {
 
     makeAIMove() {
         if (!this.isAIEnabled || this.currentPlayer !== this.aiColor) {
-            console.log('AI move skipped - not AI turn or AI disabled');
+            if (this.debugMode) console.log('AI move skipped - not AI turn or AI disabled');
             return;
         }
 
-        console.log('AI thinking...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
+        if (this.debugMode) console.log('AI thinking...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
         const moves = this.getAllPossibleMoves(this.aiColor);
-        console.log('Available moves:', moves.length);
+        if (this.debugMode) console.log('Available moves:', moves.length);
 
         if (moves.length === 0) {
-            console.log('No moves available for AI');
+            if (this.debugMode) console.log('No moves available for AI');
             return;
         }
 
-        let bestMove = null;
-        let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
-
-        for (const move of moves) {
-            // Make move
-            const savedPiece = this.boardState[move.toRow][move.toCol];
-            const movingPiece = this.boardState[move.fromRow][move.fromCol];
-            this.boardState[move.toRow][move.toCol] = movingPiece;
-            this.boardState[move.fromRow][move.fromCol] = null;
-
-            // Evaluate position
-            const score = this.minimax(2, this.aiColor === 'white');
-
-            // Undo move
-            this.boardState[move.fromRow][move.fromCol] = movingPiece;
-            this.boardState[move.toRow][move.toCol] = savedPiece;
-
-            // Update best move
-            if (this.aiColor === 'white' && score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-            } else if (this.aiColor === 'black' && score < bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
-        }
+        // Pick a random move for now (we'll improve this later)
+        const moveIndex = Math.floor(Math.random() * moves.length);
+        const bestMove = moves[moveIndex];
 
         if (bestMove) {
-            console.log('AI executing move:', bestMove);
-            this.movePiece(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
+            if (this.debugMode) console.log('AI executing move:', bestMove);
+            
+            // Execute the move using the existing movePiece method
+            this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
         } else {
-            console.log('AI could not find a valid move');
+            if (this.debugMode) console.log('AI could not find a valid move');
         }
     }
 
-    movePiece(fromRow, fromCol, toRow, toCol) {
+    executeMove(fromRow, fromCol, toRow, toCol) {
         const piece = this.boardState[fromRow][fromCol];
         const capturedPiece = this.boardState[toRow][toCol];
         
@@ -390,20 +371,30 @@ class ChessGame {
         squares[fromRow * 8 + fromCol].textContent = '';
         squares[toRow * 8 + toCol].textContent = this.pieces[piece.color][piece.piece];
 
+        if (this.debugMode) {
+            console.log(`Move executed: ${piece.color} ${piece.piece} from ${fromRow},${fromCol} to ${toRow},${toCol}`);
+            if (capturedPiece) {
+                console.log(`Captured: ${capturedPiece.color} ${capturedPiece.piece}`);
+            }
+        }
+
         // Update current player
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
         this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
             this.currentPlayer.slice(1)}'s Turn`;
-        
-        console.log(`Move made: ${piece.color} ${piece.piece} from ${fromRow},${fromCol} to ${toRow},${toCol}`);
-        if (capturedPiece) {
-            console.log(`Captured: ${capturedPiece.color} ${capturedPiece.piece}`);
-        }
+    }
 
-        // If it's AI's turn after this move, trigger AI move
+    movePiece(fromRow, fromCol, toRow, toCol) {
+        this.executeMove(fromRow, fromCol, toRow, toCol);
+
+        // If it's AI's turn after this move, trigger AI move with a slight delay
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
-            console.log('Triggering AI move...', 'Current player:', this.currentPlayer);
-            setTimeout(() => this.makeAIMove(), 300); // Added slight delay for better visualization
+            if (this.debugMode) console.log('Triggering AI move...', 'Current player:', this.currentPlayer);
+            setTimeout(() => {
+                if (this.currentPlayer === this.aiColor) {
+                    this.makeAIMove();
+                }
+            }, 500);
         }
     }
 
