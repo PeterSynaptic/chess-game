@@ -87,6 +87,7 @@ class ChessGame {
     handleSquareClick(row, col) {
         // Prevent moves during AI turn
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
+            console.log('Blocked - AI turn');
             return;
         }
 
@@ -112,9 +113,6 @@ class ChessGame {
             
             if (validMove) {
                 this.movePiece(this.selectedPiece.row, this.selectedPiece.col, row, col);
-                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-                this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
-                    this.currentPlayer.slice(1)}'s Turn`;
             }
             this.selectedPiece = null;
         }
@@ -373,19 +371,7 @@ class ChessGame {
 
         if (bestMove) {
             console.log('AI executing move:', bestMove);
-            const piece = this.boardState[bestMove.fromRow][bestMove.fromCol];
-            this.boardState[bestMove.toRow][bestMove.toCol] = piece;
-            this.boardState[bestMove.fromRow][bestMove.fromCol] = null;
-
-            // Update UI
-            const squares = document.querySelectorAll('.square');
-            squares[bestMove.fromRow * 8 + bestMove.fromCol].textContent = '';
-            squares[bestMove.toRow * 8 + bestMove.toCol].textContent = this.pieces[this.aiColor][bestMove.piece];
-
-            // Update current player and display
-            this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-            this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
-                this.currentPlayer.slice(1)}'s Turn`;
+            this.movePiece(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
         } else {
             console.log('AI could not find a valid move');
         }
@@ -393,6 +379,9 @@ class ChessGame {
 
     movePiece(fromRow, fromCol, toRow, toCol) {
         const piece = this.boardState[fromRow][fromCol];
+        const capturedPiece = this.boardState[toRow][toCol];
+        
+        // Make the move
         this.boardState[toRow][toCol] = piece;
         this.boardState[fromRow][fromCol] = null;
 
@@ -401,18 +390,20 @@ class ChessGame {
         squares[fromRow * 8 + fromCol].textContent = '';
         squares[toRow * 8 + toCol].textContent = this.pieces[piece.color][piece.piece];
 
-        // Update current player first
+        // Update current player
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
         this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
             this.currentPlayer.slice(1)}'s Turn`;
+        
+        console.log(`Move made: ${piece.color} ${piece.piece} from ${fromRow},${fromCol} to ${toRow},${toCol}`);
+        if (capturedPiece) {
+            console.log(`Captured: ${capturedPiece.color} ${capturedPiece.piece}`);
+        }
 
         // If it's AI's turn after this move, trigger AI move
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
             console.log('Triggering AI move...', 'Current player:', this.currentPlayer);
-            // Use requestAnimationFrame for better timing
-            requestAnimationFrame(() => {
-                this.makeAIMove();
-            });
+            setTimeout(() => this.makeAIMove(), 300); // Added slight delay for better visualization
         }
     }
 
