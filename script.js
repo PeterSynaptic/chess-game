@@ -5,6 +5,8 @@ class ChessGame {
         this.resetButton = document.getElementById('reset');
         this.selectedPiece = null;
         this.currentPlayer = 'white';
+        this.isAIEnabled = true;  // Enable AI by default
+        this.aiColor = 'black';   // AI plays as black
         this.pieces = {
             white: {
                 king: '♔',
@@ -83,6 +85,11 @@ class ChessGame {
     }
 
     handleSquareClick(row, col) {
+        // Prevent moves during AI turn
+        if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
+            return;
+        }
+
         const clickedSquare = this.boardState[row][col];
         const squares = document.querySelectorAll('.square');
         
@@ -223,6 +230,140 @@ class ChessGame {
         return true;
     }
 
+    evaluatePosition() {
+        const pieceValues = {
+            'pawn': 1,
+            'knight': 3,
+            'bishop': 3,
+            'rook': 5,
+            'queen': 9,
+            'king': 100
+        };
+
+        let score = 0;
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.boardState[row][col];
+                if (piece) {
+                    const value = pieceValues[piece.piece];
+                    score += piece.color === 'white' ? value : -value;
+                }
+            }
+        }
+        return score;
+    }
+
+    getAllPossibleMoves(color) {
+        const moves = [];
+        for (let fromRow = 0; fromRow < 8; fromRow++) {
+            for (let fromCol = 0; fromCol < 8; fromCol++) {
+                const piece = this.boardState[fromRow][fromCol];
+                if (piece && piece.color === color) {
+                    for (let toRow = 0; toRow < 8; toRow++) {
+                        for (let toCol = 0; toCol < 8; toCol++) {
+                            if (this.isValidMove(fromRow, fromCol, toRow, toCol)) {
+                                moves.push({
+                                    fromRow,
+                                    fromCol,
+                                    toRow,
+                                    toCol,
+                                    piece: piece.piece
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return moves;
+    }
+
+    minimax(depth, isMaximizing, alpha = -Infinity, beta = Infinity) {
+        if (depth === 0) {
+            return this.evaluatePosition();
+        }
+
+        const color = isMaximizing ? 'white' : 'black';
+        const moves = this.getAllPossibleMoves(color);
+        
+        if (isMaximizing) {
+            let maxEval = -Infinity;
+            for (const move of moves) {
+                // Make move
+                const savedPiece = this.boardState[move.toRow][move.toCol];
+                const movingPiece = this.boardState[move.fromRow][move.fromCol];
+                this.boardState[move.toRow][move.toCol] = movingPiece;
+                this.boardState[move.fromRow][move.fromCol] = null;
+
+                const evalScore = this.minimax(depth - 1, false, alpha, beta);
+                
+                // Undo move
+                this.boardState[move.fromRow][move.fromCol] = movingPiece;
+                this.boardState[move.toRow][move.toCol] = savedPiece;
+
+                maxEval = Math.max(maxEval, evalScore);
+                alpha = Math.max(alpha, evalScore);
+                if (beta <= alpha) break;
+            }
+            return maxEval;
+        } else {
+            let minEval = Infinity;
+            for (const move of moves) {
+                // Make move
+                const savedPiece = this.boardState[move.toRow][move.toCol];
+                const movingPiece = this.boardState[move.fromRow][move.fromCol];
+                this.boardState[move.toRow][move.toCol] = movingPiece;
+                this.boardState[move.fromRow][move.fromCol] = null;
+
+                const evalScore = this.minimax(depth - 1, true, alpha, beta);
+                
+                // Undo move
+                this.boardState[move.fromRow][move.fromCol] = movingPiece;
+                this.boardState[move.toRow][move.toCol] = savedPiece;
+
+                minEval = Math.min(minEval, evalScore);
+                beta = Math.min(beta, evalScore);
+                if (beta <= alpha) break;
+            }
+            return minEval;
+        }
+    }
+
+    makeAIMove() {
+        const moves = this.getAllPossibleMoves(this.aiColor);
+        let bestMove = null;
+        let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
+
+        for (const move of moves) {
+            // Make move
+            const savedPiece = this.boardState[move.toRow][move.toCol];
+            const movingPiece = this.boardState[move.fromRow][move.fromCol];
+            this.boardState[move.toRow][move.toCol] = movingPiece;
+            this.boardState[move.fromRow][move.fromCol] = null;
+
+            // Evaluate position
+            const score = this.minimax(2, this.aiColor === 'white');
+
+            // Undo move
+            this.boardState[move.fromRow][move.fromCol] = movingPiece;
+            this.boardState[move.toRow][move.toCol] = savedPiece;
+
+            // Update best move
+            if (this.aiColor === 'white' && score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            } else if (this.aiColor === 'black' && score < bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+
+        if (bestMove) {
+            this.handleSquareClick(bestMove.fromRow, bestMove.fromCol);
+            this.handleSquareClick(bestMove.toRow, bestMove.toCol);
+        }
+    }
+
     movePiece(fromRow, fromCol, toRow, toCol) {
         const piece = this.boardState[fromRow][fromCol];
         this.boardState[toRow][toCol] = piece;
@@ -232,6 +373,11 @@ class ChessGame {
         const squares = document.querySelectorAll('.square');
         squares[fromRow * 8 + fromCol].textContent = '';
         squares[toRow * 8 + toCol].textContent = this.pieces[piece.color][piece.piece];
+
+        // If it's AI's turn after the move, make AI move
+        if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
+            setTimeout(() => this.makeAIMove(), 500); // Add delay for better UX
+        }
     }
 
     resetGame() {
