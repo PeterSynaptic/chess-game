@@ -115,6 +115,11 @@ class ChessGame {
                 this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
                 this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
                     this.currentPlayer.slice(1)}'s Turn`;
+                    
+                // If it's AI's turn after the move, trigger AI move
+                if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
+                    setTimeout(() => this.makeAIMove(), 500);
+                }
             }
             this.selectedPiece = null;
         }
