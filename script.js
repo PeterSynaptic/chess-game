@@ -232,21 +232,118 @@ class ChessGame {
 
     evaluatePosition() {
         const pieceValues = {
-            'pawn': 1,
-            'knight': 3,
-            'bishop': 3,
-            'rook': 5,
-            'queen': 9,
-            'king': 100
+            'pawn': 100,
+            'knight': 320,
+            'bishop': 330,
+            'rook': 500,
+            'queen': 900,
+            'king': 20000
         };
+
+        // Piece position tables for positional evaluation
+        const pawnPositionWhite = [
+            [0,  0,  0,  0,  0,  0,  0,  0],
+            [50, 50, 50, 50, 50, 50, 50, 50],
+            [10, 10, 20, 30, 30, 20, 10, 10],
+            [5,  5, 10, 25, 25, 10,  5,  5],
+            [0,  0,  0, 20, 20,  0,  0,  0],
+            [5, -5,-10,  0,  0,-10, -5,  5],
+            [5, 10, 10,-20,-20, 10, 10,  5],
+            [0,  0,  0,  0,  0,  0,  0,  0]
+        ];
+
+        const knightPosition = [
+            [-50,-40,-30,-30,-30,-30,-40,-50],
+            [-40,-20,  0,  0,  0,  0,-20,-40],
+            [-30,  0, 10, 15, 15, 10,  0,-30],
+            [-30,  5, 15, 20, 20, 15,  5,-30],
+            [-30,  0, 15, 20, 20, 15,  0,-30],
+            [-30,  5, 10, 15, 15, 10,  5,-30],
+            [-40,-20,  0,  5,  5,  0,-20,-40],
+            [-50,-40,-30,-30,-30,-30,-40,-50]
+        ];
+
+        const bishopPosition = [
+            [-20,-10,-10,-10,-10,-10,-10,-20],
+            [-10,  0,  0,  0,  0,  0,  0,-10],
+            [-10,  0,  5, 10, 10,  5,  0,-10],
+            [-10,  5,  5, 10, 10,  5,  5,-10],
+            [-10,  0, 10, 10, 10, 10,  0,-10],
+            [-10, 10, 10, 10, 10, 10, 10,-10],
+            [-10,  5,  0,  0,  0,  0,  5,-10],
+            [-20,-10,-10,-10,-10,-10,-10,-20]
+        ];
+
+        const rookPosition = [
+            [0,  0,  0,  0,  0,  0,  0,  0],
+            [5, 10, 10, 10, 10, 10, 10,  5],
+            [-5,  0,  0,  0,  0,  0,  0, -5],
+            [-5,  0,  0,  0,  0,  0,  0, -5],
+            [-5,  0,  0,  0,  0,  0,  0, -5],
+            [-5,  0,  0,  0,  0,  0,  0, -5],
+            [-5,  0,  0,  0,  0,  0,  0, -5],
+            [0,  0,  0,  5,  5,  0,  0,  0]
+        ];
+
+        const queenPosition = [
+            [-20,-10,-10, -5, -5,-10,-10,-20],
+            [-10,  0,  0,  0,  0,  0,  0,-10],
+            [-10,  0,  5,  5,  5,  5,  0,-10],
+            [-5,  0,  5,  5,  5,  5,  0, -5],
+            [0,  0,  5,  5,  5,  5,  0, -5],
+            [-10,  5,  5,  5,  5,  5,  0,-10],
+            [-10,  0,  5,  0,  0,  0,  0,-10],
+            [-20,-10,-10, -5, -5,-10,-10,-20]
+        ];
+
+        const kingPosition = [
+            [-30,-40,-40,-50,-50,-40,-40,-30],
+            [-30,-40,-40,-50,-50,-40,-40,-30],
+            [-30,-40,-40,-50,-50,-40,-40,-30],
+            [-30,-40,-40,-50,-50,-40,-40,-30],
+            [-20,-30,-30,-40,-40,-30,-30,-20],
+            [-10,-20,-20,-20,-20,-20,-20,-10],
+            [20, 20,  0,  0,  0,  0, 20, 20],
+            [20, 30, 10,  0,  0, 10, 30, 20]
+        ];
 
         let score = 0;
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = this.boardState[row][col];
                 if (piece) {
-                    const value = pieceValues[piece.piece];
-                    score += piece.color === 'white' ? value : -value;
+                    let positionBonus = 0;
+                    const isWhite = piece.color === 'white';
+                    const positionRow = isWhite ? row : 7 - row;
+                    
+                    // Base piece value
+                    const baseValue = pieceValues[piece.piece];
+                    
+                    // Position bonus based on piece type
+                    switch(piece.piece) {
+                        case 'pawn':
+                            positionBonus = pawnPositionWhite[positionRow][col];
+                            break;
+                        case 'knight':
+                            positionBonus = knightPosition[positionRow][col];
+                            break;
+                        case 'bishop':
+                            positionBonus = bishopPosition[positionRow][col];
+                            break;
+                        case 'rook':
+                            positionBonus = rookPosition[positionRow][col];
+                            break;
+                        case 'queen':
+                            positionBonus = queenPosition[positionRow][col];
+                            break;
+                        case 'king':
+                            positionBonus = kingPosition[positionRow][col];
+                            break;
+                    }
+
+                    // Add position-adjusted score
+                    const totalScore = baseValue + positionBonus;
+                    score += isWhite ? totalScore : -totalScore;
                 }
             }
         }
@@ -344,14 +441,38 @@ class ChessGame {
             return;
         }
 
-        // Pick a random move for now (we'll improve this later)
-        const moveIndex = Math.floor(Math.random() * moves.length);
-        const bestMove = moves[moveIndex];
+        let bestMove = null;
+        let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
+
+        // Increase search depth for harder difficulty
+        const searchDepth = 4;
+
+        for (const move of moves) {
+            // Make move
+            const savedPiece = this.boardState[move.toRow][move.toCol];
+            const movingPiece = this.boardState[move.fromRow][move.fromCol];
+            this.boardState[move.toRow][move.toCol] = movingPiece;
+            this.boardState[move.fromRow][move.fromCol] = null;
+
+            // Evaluate position using deeper minimax search
+            const score = this.minimax(searchDepth - 1, this.aiColor === 'white', -Infinity, Infinity);
+
+            // Undo move
+            this.boardState[move.fromRow][move.fromCol] = movingPiece;
+            this.boardState[move.toRow][move.toCol] = savedPiece;
+
+            // Update best move
+            if (this.aiColor === 'white' && score > bestScore) {
+                bestScore = score;
+                bestMove = move;
+            } else if (this.aiColor === 'black' && score < bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
 
         if (bestMove) {
-            if (this.debugMode) console.log('AI executing move:', bestMove);
-            
-            // Execute the move using the existing movePiece method
+            if (this.debugMode) console.log('AI executing move:', bestMove, 'with score:', bestScore);
             this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
         } else {
             if (this.debugMode) console.log('AI could not find a valid move');
