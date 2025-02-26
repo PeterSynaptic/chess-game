@@ -20,7 +20,9 @@ body {
     border-radius: 8px;
     box-shadow: 0 0 20px rgba(0,0,0,0.1);
     width: 95%;
-    max-width: 350px; /* Reduced from 400px for better mobile fit */
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
 }
 
 .board {
@@ -80,6 +82,11 @@ body {
     margin-bottom: 10px;
     font-size: 1.1em;
     font-weight: bold;
+    text-align: center;
+    padding: 5px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 #reset {
@@ -97,6 +104,49 @@ body {
 
 #reset:hover {
     background-color: #45a049;
+}
+
+.score-board {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f8f8;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.player-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.player-info.black {
+    background: rgba(0,0,0,0.05);
+}
+
+.player-info.white {
+    background: rgba(255,255,255,0.8);
+}
+
+.captured-pieces {
+    font-size: calc(12px + 1vmin);
+    min-height: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+}
+
+.score {
+    font-weight: bold;
+    font-size: 0.9em;
+    min-width: 80px;
+    text-align: right;
 }
 
 /* Add media query for very small screens */
@@ -136,5 +186,19 @@ body {
     
     .game-info {
         padding: 5px 0;
+    }
+
+    .score-board {
+        padding: 5px;
+        gap: 5px;
+    }
+
+    .captured-pieces {
+        font-size: calc(10px + 1vmin);
+        min-height: 20px;
+    }
+
+    .score {
+        font-size: 0.8em;
     }
 }
