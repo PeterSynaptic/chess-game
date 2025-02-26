@@ -565,32 +565,128 @@ class ChessGame {
         }
     }
 
+    movePiece(fromRow, fromCol, toRow, toCol) {
+        // Execute the move
+        this.executeMove(fromRow, fromCol, toRow, toCol);
+
+        // If it's AI's turn, make AI move after a short delay
+        if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
+            if (this.debugMode) console.log('Scheduling AI move...');
+            setTimeout(() => {
+                if (this.currentPlayer === this.aiColor) {
+                    if (this.debugMode) console.log('Making AI move...');
+                    this.makeAIMove();
+                }
+            }, 500);
+        }
+    }
+
+    executeMove(fromRow, fromCol, toRow, toCol) {
+        const piece = this.boardState[fromRow][fromCol];
+        const capturedPiece = this.boardState[toRow][toCol];
+        
+        if (this.debugMode) {
+            console.log('Executing move:', {
+                from: { row: fromRow, col: fromCol },
+                to: { row: toRow, col: toCol },
+                piece: piece,
+                capturedPiece: capturedPiece
+            });
+        }
+
+        // Handle captured piece
+        if (capturedPiece) {
+            const capturer = piece.color;
+            const pieceValue = this.getPieceValue(capturedPiece.piece);
+            this.capturedPieces[capturer].push(capturedPiece.piece);
+            this.scores[capturer] += pieceValue;
+            this.updateScoreDisplay();
+            this.updateCapturedPieces();
+        }
+
+        // Handle castling move
+        if (piece.piece === 'king' && Math.abs(fromCol - toCol) === 2) {
+            const isKingside = toCol > fromCol;
+            const rookFromCol = isKingside ? 7 : 0;
+            const rookToCol = isKingside ? toCol - 1 : toCol + 1;
+            const rook = this.boardState[fromRow][rookFromCol];
+            
+            // Move rook
+            this.boardState[fromRow][rookToCol] = rook;
+            this.boardState[fromRow][rookFromCol] = null;
+            
+            // Update UI for rook
+            const squares = document.querySelectorAll('.square');
+            squares[fromRow * 8 + rookFromCol].textContent = '';
+            squares[fromRow * 8 + rookToCol].textContent = this.pieces[piece.color]['rook'];
+        }
+
+        // Make the move
+        this.boardState[toRow][toCol] = piece;
+        this.boardState[fromRow][fromCol] = null;
+
+        // Update castling rights
+        if (piece.piece === 'king') {
+            this.canCastle[piece.color].kingside = false;
+            this.canCastle[piece.color].queenside = false;
+        } else if (piece.piece === 'rook') {
+            if (fromCol === 0) this.canCastle[piece.color].queenside = false;
+            if (fromCol === 7) this.canCastle[piece.color].kingside = false;
+        }
+
+        // Update UI
+        const squares = document.querySelectorAll('.square');
+        squares[fromRow * 8 + fromCol].textContent = '';
+        squares[toRow * 8 + toCol].textContent = this.pieces[piece.color][piece.piece];
+
+        // Update current player
+        this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+
+        // Check for check/checkmate
+        const isInCheck = this.isInCheck(this.currentPlayer);
+        const isCheckmate = isInCheck && this.isCheckmate(this.currentPlayer);
+
+        if (isCheckmate) {
+            const winner = this.currentPlayer === 'white' ? 'Black' : 'White';
+            this.turnDisplay.textContent = `Checkmate! ${winner} wins!`;
+            this.isAIEnabled = false; // Stop AI moves after checkmate
+        } else if (isInCheck) {
+            this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
+                this.currentPlayer.slice(1)}'s Turn - CHECK!`;
+        } else {
+            this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
+                this.currentPlayer.slice(1)}'s Turn`;
+        }
+
+        if (this.debugMode) {
+            console.log('Move complete, current player:', this.currentPlayer);
+            console.log('Board state:', this.boardState);
+        }
+    }
+
     makeAIMove() {
         if (!this.isAIEnabled || this.currentPlayer !== this.aiColor) {
             if (this.debugMode) console.log('AI move skipped - not AI turn or AI disabled');
-            return;
+            return false;
         }
 
         if (this.debugMode) console.log('AI thinking...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
         const moves = this.getAllPossibleMoves(this.aiColor);
-        if (this.debugMode) console.log('Available moves:', moves.length);
-
-        if (moves.length === 0) {
+        
+        if (!moves || moves.length === 0) {
             if (this.debugMode) console.log('No moves available for AI');
-            return;
+            return false;
         }
+
+        // Get difficulty settings
+        const settings = this.getDifficultySettings();
+        const searchDepth = settings.depth;
 
         // Initialize best move tracking
         let bestMove = null;
         let bestScore = this.aiColor === 'white' ? -Infinity : Infinity;
 
-        // Get difficulty settings for search depth
-        const settings = this.getDifficultySettings();
-        const searchDepth = settings.depth;
-
-        if (this.debugMode) console.log('Searching with depth:', searchDepth);
-
-        // Try each possible move
+        // Evaluate each possible move
         for (const move of moves) {
             // Make the move temporarily
             const savedPiece = this.boardState[move.toRow][move.toCol];
@@ -598,7 +694,7 @@ class ChessGame {
             this.boardState[move.toRow][move.toCol] = movingPiece;
             this.boardState[move.fromRow][move.fromCol] = null;
 
-            // Evaluate the position
+            // Evaluate position
             const score = this.minimax(searchDepth - 1, this.aiColor === 'white', -Infinity, Infinity);
 
             // Undo the move
@@ -606,56 +702,25 @@ class ChessGame {
             this.boardState[move.toRow][move.toCol] = savedPiece;
 
             if (this.debugMode) {
-                console.log(`Evaluated move: ${move.fromRow},${move.fromCol} to ${move.toRow},${move.toCol} - Score: ${score}`);
+                console.log(`Move ${move.fromRow},${move.fromCol} to ${move.toRow},${move.toCol} score: ${score}`);
             }
 
             // Update best move
-            if ((this.aiColor === 'white' && score > bestScore) || 
-                (this.aiColor === 'black' && score < bestScore)) {
+            const isBetter = this.aiColor === 'white' ? score > bestScore : score < bestScore;
+            if (isBetter) {
                 bestScore = score;
                 bestMove = move;
-                if (this.debugMode) console.log('New best move found:', move, 'score:', bestScore);
             }
         }
 
+        // Execute the best move found
         if (bestMove) {
-            if (this.debugMode) console.log('Executing best move:', bestMove, 'with score:', bestScore);
-            // Execute the best move found
+            if (this.debugMode) console.log('Executing move:', bestMove);
             this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
             return true;
-        } else {
-            if (this.debugMode) console.log('No valid move found');
-            return false;
         }
-    }
 
-    movePiece(fromRow, fromCol, toRow, toCol) {
-        this.executeMove(fromRow, fromCol, toRow, toCol);
-
-        // If it's AI's turn after this move, trigger AI move with a slight delay
-        if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
-            if (this.debugMode) console.log('Triggering AI move...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
-            setTimeout(() => {
-                if (this.currentPlayer === this.aiColor) {
-                    const moved = this.makeAIMove();
-                    if (!moved && this.debugMode) {
-                        console.log('AI failed to make a move');
-                    }
-                }
-            }, 500);
-        }
-    }
-
-    resetGame() {
-        this.currentPlayer = 'white';
-        this.selectedPiece = null;
-        this.turnDisplay.textContent = "White's Turn";
-        // Reset captured pieces and scores
-        this.capturedPieces = { white: [], black: [] };
-        this.scores = { white: 0, black: 0 };
-        this.updateScoreDisplay();
-        this.updateCapturedPieces();
-        this.initializeBoard();
+        return false;
     }
 
     isInCheck(color) {
