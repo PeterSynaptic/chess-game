@@ -28,6 +28,14 @@ class ChessGame {
         };
         
         this.boardState = [];
+        this.capturedPieces = {
+            white: [],
+            black: []
+        };
+        this.scores = {
+            white: 0,
+            black: 0
+        };
         this.initializeBoard();
         this.setupEventListeners();
     }
@@ -479,10 +487,56 @@ class ChessGame {
         }
     }
 
+    getPieceValue(piece) {
+        const values = {
+            'pawn': 1,
+            'knight': 3,
+            'bishop': 3,
+            'rook': 5,
+            'queen': 9,
+            'king': 0  // King's value not counted in score
+        };
+        return values[piece] || 0;
+    }
+
+    updateScoreDisplay() {
+        document.getElementById('white-score').textContent = this.scores.white;
+        document.getElementById('black-score').textContent = this.scores.black;
+    }
+
+    updateCapturedPieces() {
+        const capturedByWhite = document.getElementById('captured-by-white');
+        const capturedByBlack = document.getElementById('captured-by-black');
+        
+        capturedByWhite.innerHTML = this.capturedPieces.white
+            .map(piece => this.pieces.black[piece])
+            .join(' ');
+        
+        capturedByBlack.innerHTML = this.capturedPieces.black
+            .map(piece => this.pieces.white[piece])
+            .join(' ');
+    }
+
     executeMove(fromRow, fromCol, toRow, toCol) {
         const piece = this.boardState[fromRow][fromCol];
         const capturedPiece = this.boardState[toRow][toCol];
         
+        // Handle captured piece
+        if (capturedPiece) {
+            const capturer = piece.color;
+            const pieceValue = this.getPieceValue(capturedPiece.piece);
+            
+            // Add to captured pieces array
+            this.capturedPieces[capturer].push(capturedPiece.piece);
+            
+            // Update score
+            this.scores[capturer] += pieceValue;
+            
+            // Update displays
+            this.updateScoreDisplay();
+            this.updateCapturedPieces();
+        }
+
         // Make the move
         this.boardState[toRow][toCol] = piece;
         this.boardState[fromRow][fromCol] = null;
@@ -523,6 +577,11 @@ class ChessGame {
         this.currentPlayer = 'white';
         this.selectedPiece = null;
         this.turnDisplay.textContent = "White's Turn";
+        // Reset captured pieces and scores
+        this.capturedPieces = { white: [], black: [] };
+        this.scores = { white: 0, black: 0 };
+        this.updateScoreDisplay();
+        this.updateCapturedPieces();
         this.initializeBoard();
     }
 }
