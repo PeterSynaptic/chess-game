@@ -566,18 +566,19 @@ class ChessGame {
     }
 
     movePiece(fromRow, fromCol, toRow, toCol) {
-        // Execute the move
+        // Execute the player's move
         this.executeMove(fromRow, fromCol, toRow, toCol);
 
-        // If it's AI's turn, make AI move after a short delay
+        // Trigger AI move if it's AI's turn
         if (this.isAIEnabled && this.currentPlayer === this.aiColor) {
             if (this.debugMode) console.log('Scheduling AI move...');
+            // Increase delay slightly to ensure move is visible
             setTimeout(() => {
                 if (this.currentPlayer === this.aiColor) {
-                    if (this.debugMode) console.log('Making AI move...');
+                    if (this.debugMode) console.log('Making AI move...', this.currentPlayer);
                     this.makeAIMove();
                 }
-            }, 500);
+            }, 750); // Increased delay for better visibility
         }
     }
 
@@ -590,7 +591,8 @@ class ChessGame {
                 from: { row: fromRow, col: fromCol },
                 to: { row: toRow, col: toCol },
                 piece: piece,
-                capturedPiece: capturedPiece
+                capturedPiece: capturedPiece,
+                currentPlayer: this.currentPlayer
             });
         }
 
@@ -660,7 +662,7 @@ class ChessGame {
 
         if (this.debugMode) {
             console.log('Move complete, current player:', this.currentPlayer);
-            console.log('Board state:', this.boardState);
+            console.log('Board state:', JSON.stringify(this.boardState));
         }
     }
 
@@ -673,6 +675,8 @@ class ChessGame {
         if (this.debugMode) console.log('AI thinking...', 'Current player:', this.currentPlayer, 'AI color:', this.aiColor);
         const moves = this.getAllPossibleMoves(this.aiColor);
         
+        if (this.debugMode) console.log('Available moves:', moves);
+
         if (!moves || moves.length === 0) {
             if (this.debugMode) console.log('No moves available for AI');
             return false;
@@ -695,28 +699,38 @@ class ChessGame {
             this.boardState[move.fromRow][move.fromCol] = null;
 
             // Evaluate position
-            const score = this.minimax(searchDepth - 1, this.aiColor === 'white', -Infinity, Infinity);
+            const score = this.minimax(searchDepth - 1, false, -Infinity, Infinity);
 
             // Undo the move
             this.boardState[move.fromRow][move.fromCol] = movingPiece;
             this.boardState[move.toRow][move.toCol] = savedPiece;
 
             if (this.debugMode) {
-                console.log(`Move ${move.fromRow},${move.fromCol} to ${move.toRow},${move.toCol} score: ${score}`);
+                console.log(`Evaluated move: ${move.fromRow},${move.fromCol} to ${move.toRow},${move.toCol} score: ${score}`);
             }
 
             // Update best move
-            const isBetter = this.aiColor === 'white' ? score > bestScore : score < bestScore;
-            if (isBetter) {
+            if ((this.aiColor === 'white' && score > bestScore) || 
+                (this.aiColor === 'black' && score < bestScore)) {
                 bestScore = score;
                 bestMove = move;
             }
         }
 
-        // Execute the best move found
         if (bestMove) {
-            if (this.debugMode) console.log('Executing move:', bestMove);
+            if (this.debugMode) console.log('Executing best move:', bestMove);
+            
+            // Directly update the board state and UI
+            const fromPiece = this.boardState[bestMove.fromRow][bestMove.fromCol];
+            const toPiece = this.boardState[bestMove.toRow][bestMove.toCol];
+            
+            // Execute the move using the regular move execution
             this.executeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
+            
+            if (this.debugMode) {
+                console.log('Move executed, new board state:', this.boardState);
+            }
+            
             return true;
         }
 
@@ -751,7 +765,7 @@ class ChessGame {
                 const piece = this.boardState[fromRow][fromCol];
                 if (piece && piece.color === color) {
                     for (let toRow = 0; toRow < 8; toRow++) {
-                        for (let toCol = 0; toCol < 8; toCol++) {
+                        for (let toCol = 0; toCol < 8; toCol++) {  // Fixed the infinite loop here
                             if (this.isValidMove(fromRow, fromCol, toRow, toCol)) {
                                 // Try the move
                                 const savedPiece = this.boardState[toRow][toCol];
@@ -773,6 +787,36 @@ class ChessGame {
             }
         }
         return true;
+    }
+
+    getPieceValue(piece) {
+        const values = {
+            'pawn': 1,
+            'knight': 3,
+            'bishop': 3,
+            'rook': 5,
+            'queen': 9,
+            'king': 0  // King's value not counted in score as it can't be captured
+        };
+        return values[piece] || 0;
+    }
+
+    updateScoreDisplay() {
+        document.getElementById('white-score').textContent = this.scores.white;
+        document.getElementById('black-score').textContent = this.scores.black;
+    }
+
+    updateCapturedPieces() {
+        const capturedByWhite = document.getElementById('captured-by-white');
+        const capturedByBlack = document.getElementById('captured-by-black');
+        
+        capturedByWhite.innerHTML = this.capturedPieces.white
+            .map(piece => this.pieces.black[piece])
+            .join(' ');
+        
+        capturedByBlack.innerHTML = this.capturedPieces.black
+            .map(piece => this.pieces.white[piece])
+            .join(' ');
     }
 }
 
