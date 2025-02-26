@@ -9,7 +9,7 @@ class ChessGame {
         this.aiColor = 'black';   // AI plays as black
         this.debugMode = true; // Enable debug logging
         this.difficulty = 'normal'; // 'easy', 'normal', 'hard'
-        this.isInCheck = false;
+        this.isInCheckState = false; // Add this line to store check state
         this.canCastle = {
             white: { kingside: true, queenside: true },
             black: { kingside: true, queenside: true }
@@ -248,7 +248,7 @@ class ChessGame {
 
         // Castling
         if (piece.piece === 'king' && fromRow === toRow && Math.abs(fromCol - toCol) === 2) {
-            if (this.isInCheck(piece.color)) return false;
+            if (this.isInCheckState && piece.color === this.currentPlayer) return false;
 
             const isKingside = toCol > fromCol;
             const rookCol = isKingside ? 7 : 0;
@@ -266,11 +266,13 @@ class ChessGame {
 
             // Check if king passes through check
             const intermediateCol = fromCol + direction;
+            const tempState = this.isInCheckState;
             this.boardState[fromRow][intermediateCol] = piece;
             this.boardState[fromRow][fromCol] = null;
-            const passesThroughCheck = this.isInCheck(piece.color);
+            const passesThroughCheck = this.checkForCheck(piece.color);
             this.boardState[fromRow][fromCol] = piece;
             this.boardState[fromRow][intermediateCol] = null;
+            this.isInCheckState = tempState;
 
             return !passesThroughCheck;
         }
@@ -645,14 +647,14 @@ class ChessGame {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
 
         // Check for check/checkmate
-        const isInCheck = this.isInCheck(this.currentPlayer);
-        const isCheckmate = isInCheck && this.isCheckmate(this.currentPlayer);
+        this.isInCheckState = this.checkForCheck(this.currentPlayer);
+        const isCheckmate = this.isInCheckState && this.isCheckmate(this.currentPlayer);
 
         if (isCheckmate) {
             const winner = this.currentPlayer === 'white' ? 'Black' : 'White';
             this.turnDisplay.textContent = `Checkmate! ${winner} wins!`;
             this.isAIEnabled = false; // Stop AI moves after checkmate
-        } else if (isInCheck) {
+        } else if (this.isInCheckState) {
             this.turnDisplay.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + 
                 this.currentPlayer.slice(1)}'s Turn - CHECK!`;
         } else {
@@ -737,7 +739,7 @@ class ChessGame {
         return false;
     }
 
-    isInCheck(color) {
+    checkForCheck(color) {
         const kingPos = this.findKing(color);
         if (!kingPos) return false;
 
@@ -757,7 +759,7 @@ class ChessGame {
     }
 
     isCheckmate(color) {
-        if (!this.isInCheck(color)) return false;
+        if (!this.isInCheckState && this.currentPlayer === color) return false;
 
         // Try all possible moves to see if any can get out of check
         for (let fromRow = 0; fromRow < 8; fromRow++) {
@@ -765,7 +767,7 @@ class ChessGame {
                 const piece = this.boardState[fromRow][fromCol];
                 if (piece && piece.color === color) {
                     for (let toRow = 0; toRow < 8; toRow++) {
-                        for (let toCol = 0; toCol < 8; toCol++) {  // Fixed the infinite loop here
+                        for (let toCol = 0; toCol < 8; toCol++) {
                             if (this.isValidMove(fromRow, fromCol, toRow, toCol)) {
                                 // Try the move
                                 const savedPiece = this.boardState[toRow][toCol];
@@ -773,7 +775,7 @@ class ChessGame {
                                 this.boardState[fromRow][fromCol] = null;
 
                                 // Check if still in check
-                                const stillInCheck = this.isInCheck(color);
+                                const stillInCheck = this.checkForCheck(color);
 
                                 // Undo the move
                                 this.boardState[fromRow][fromCol] = piece;
@@ -817,6 +819,37 @@ class ChessGame {
         capturedByBlack.innerHTML = this.capturedPieces.black
             .map(piece => this.pieces.white[piece])
             .join(' ');
+    }
+
+    resetGame() {
+        // Reset game state
+        this.currentPlayer = 'white';
+        this.selectedPiece = null;
+        this.isInCheckState = false;
+        this.canCastle = {
+            white: { kingside: true, queenside: true },
+            black: { kingside: true, queenside: true }
+        };
+        this.capturedPieces = {
+            white: [],
+            black: []
+        };
+        this.scores = {
+            white: 0,
+            black: 0
+        };
+
+        // Update UI
+        this.turnDisplay.textContent = "White's Turn";
+        this.updateScoreDisplay();
+        this.updateCapturedPieces();
+        
+        // Reset the board
+        this.initializeBoard();
+
+        if (this.debugMode) {
+            console.log('Game reset');
+        }
     }
 }
 
