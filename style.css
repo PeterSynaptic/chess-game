@@ -149,6 +149,46 @@ body {
     text-align: right;
 }
 
+.difficulty-selector {
+    margin-bottom: 15px;
+    text-align: center;
+    padding: 10px;
+    background: #f8f8f8;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.difficulty-selector label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.difficulty-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.difficulty-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.difficulty-btn:hover {
+    background: #d0d0d0;
+}
+
+.difficulty-btn.selected {
+    background: #4CAF50;
+    color: white;
+}
+
 /* Add media query for very small screens */
 @media (max-width: 320px) {
     .game-container {
@@ -200,5 +240,14 @@ body {
 
     .score {
         font-size: 0.8em;
+    }
+
+    .difficulty-buttons {
+        gap: 5px;
+    }
+
+    .difficulty-btn {
+        padding: 6px 12px;
+        font-size: 0.9em;
     }
 }
