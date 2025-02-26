@@ -1,19 +1,204 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Game</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="game-container">
-        <div class="board" id="chessboard"></div>
-        <div class="game-info">
-            <div id="turn">White's Turn</div>
-            <button id="reset">New Game</button>
-        </div>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    padding: 10px;
+}
+
+.game-container {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    width: 95%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr); /* Make columns equal width */
+    grid-template-rows: repeat(8, 1fr);
+    gap: 0;
+    border: 2px solid #333;
+    margin-bottom: 15px;
+    aspect-ratio: 1/1; /* Keep board square */
+    width: 100%;
+}
+
+.square {
+    width: 100%;
+    aspect-ratio: 1/1; /* Keep squares square */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(16px + 1.5vmin); /* Reduced from 20px + 2vmin for better piece sizing */
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+}
+
+.square.white {
+    background-color: #f0d9b5;
+}
+
+.square.black {
+    background-color: #b58863;
+}
+
+.square.selected {
+    background-color: #7b61ff;
+}
+
+.square.valid-move {
+    position: relative;
+}
+
+.square.valid-move::before {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 255, 0, 0.3);
+    border-radius: 50%;
+}
+
+.game-info {
+    text-align: center;
+    padding: 10px 0;
+}
+
+#turn {
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-align: center;
+    padding: 5px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#reset {
+    padding: 8px 16px;
+    font-size: 1em;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+    max-width: 200px;
+}
+
+#reset:hover {
+    background-color: #45a049;
+}
+
+.score-board {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f8f8;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.player-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.player-info.black {
+    background: rgba(0,0,0,0.05);
+}
+
+.player-info.white {
+    background: rgba(255,255,255,0.8);
+}
+
+.captured-pieces {
+    font-size: calc(12px + 1vmin);
+    min-height: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+}
+
+.score {
+    font-weight: bold;
+    font-size: 0.9em;
+    min-width: 80px;
+    text-align: right;
+}
+
+/* Add media query for very small screens */
+@media (max-width: 320px) {
+    .game-container {
+        padding: 10px;
+    }
+    
+    .square {
+        font-size: calc(16px + 2vmin);
+    }
+    
+    #turn {
+        font-size: 1em;
+    }
+    
+    #reset {
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+}
+
+/* Add specific adjustments for mobile devices */
+@media (max-width: 400px) {
+    .game-container {
+        padding: 8px;
+        width: 98%;
+    }
+    
+    .board {
+        margin-bottom: 10px;
+    }
+    
+    .square {
+        font-size: calc(14px + 1.5vmin);
+    }
+    
+    .game-info {
+        padding: 5px 0;
+    }
+
+    .score-board {
+        padding: 5px;
+        gap: 5px;
+    }
+
+    .captured-pieces {
+        font-size: calc(10px + 1vmin);
+        min-height: 20px;
+    }
+
+    .score {
+        font-size: 0.8em;
+    }
+}
